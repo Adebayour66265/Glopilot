@@ -12,7 +12,7 @@ const protect = asyncHandler(async (req, res, next) => {
         }
 
         //  verify token
-        const verified = jwt.verify(token, process.env.JWT_SECTRET || 'glopilot');
+        const verified = jwt.verify(token, process.env.JWT_SECTRET);
         // Get user id frrom token 
         const user = await User.findById(verified.id).select("-password");
 
@@ -35,7 +35,7 @@ const protect = asyncHandler(async (req, res, next) => {
 
 
 const adminOnly = asyncHandler(async (req, res, next) => {
-    if (req.user.role === "rider" || req.user.role === "admin") {
+    if (req.user.role === "admin") {
         next()
     } else {
         res.status(401)
@@ -58,6 +58,14 @@ const riderOnly = asyncHandler(async (req, res, next) => {
         throw new Error("you are not Authorized, as rider");
     }
 })
+const vendorOnly = asyncHandler(async (req, res, next) => {
+    if (req.user.role === "vendor") {
+        next()
+    } else {
+        res.status(401)
+        throw new Error("you are not Authorized, as rider");
+    }
+})
 
 
 const verifiedOnly = asyncHandler(async (req, res, next) => {
@@ -74,5 +82,6 @@ module.exports = {
     adminOnly,
     riderOnly,
     verifiedOnly,
-    authorOnly
+    authorOnly,
+    vendorOnly
 }

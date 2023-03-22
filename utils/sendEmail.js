@@ -1,34 +1,43 @@
-const nodemailer = require('nodemailer');
+const nodemailer = require("nodemailer");
 const hsb = require("nodemailer-express-handlebars");
 const path = require("path");
 
 const sendEmail = async (subject, send_to, sent_from, reply_to, template, name, link) => {
     // create transporter
     const transporter = nodemailer.createTransport({
-        host: process.env.EMAIL_HOST || 'smtp-mail.outlook.com',
-        port: 587,
+        host: process.env.EMAIL_HOST,
+        // host: process.env.EMAIL_HOST || 'smtp.zoho.com',
+        port: 578,
         auth: {
-            user: process.env.EMAIL_USER || 'Adebayour66265@gmail.com',
-            pass: process.env.EMAIL_PASSWORD || 'Mustapha678@'
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASSWORD
+
         },
         tls: {
             rejectUnauthorized: false
         }
     })
 
-    const handlebarOption = {
+    // const handlebarOption = {
+    //     viewEngine: {
+    //         extName: ".handlebars",
+    //         // partialsDir: path.resolve("../views"),
+    //         partialsDir: path.join(__dirname, "../views"),
+    //         defaulLayout: false
+    //     },
+    //     // viewPath: path.resolve("../views"),
+    //     viewPath: path.join(__dirname, "../views"),
+    //     extName: ".handlebars",
+    // }
+    const viewPath = path.join(__dirname, "../views")
+
+    // transporter.use("compile", hsb(handlebarOption));
+    transporter.use("compile", hsb({
         viewEngine: {
-            extName: ".handlebars",
-            partialsDir: path.resolve("../views"),
-            defaulLayout: false
+            defaultLayout: false
         },
-        viewPath: path.resolve("../views"),
-        extName: ".handlebars",
-    }
-
-
-    transporter.use("compile", hsb(handlebarOption));
-    console.log(handlebarOption);
+        viewPath: viewPath
+    }));
     // option for sending email
     const options = {
         from: sent_from,

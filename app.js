@@ -1,10 +1,11 @@
-require("dotenv");
 const fs = require("fs");
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const cookieParser = require("cookie-parser");
+require("dotenv").config();
+
 const userRoute = require('./routes/userRoute');
 const errorHandler = require('./middleware/errorMiddleware');
 
@@ -17,7 +18,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(bodyParser.json());
 app.use(cors({
-    origin: ["http://localhost:3000"],
+    origin: '*',
     credentials: true,
 }));
 
@@ -32,17 +33,18 @@ app.get('/', (req, res) => {
 // Error middleware
 app.use(errorHandler);
 
-const PORT = process.env.PORT || 5000;
 
+const PORT = 5000 || process.env.PORT
 
 mongoose.connect(process.env.MONGO_URI).then(() => {
     app.listen(PORT, () => {
-        console.log('App is Ruuning');
+        console.log(`App is Running ${PORT}`);
     })
 }).catch((err) => {
     console.log(err);
 });
 
+// const PORT = process.env.PORT
 // app.listen(PORT, () => {
-//     console.log('App is Ruuning');
-// })
+//     console.log('App is Ruuning ');
+// });
