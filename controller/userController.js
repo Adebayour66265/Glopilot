@@ -65,7 +65,7 @@ const register = asyncHandler(async (req, res) => {
         httpOnly: true,
         expires: new Date(Date.now() + 1000 * 86400), // 1 day
         sameSite: "none",
-        secure: true,
+        // secure: true,
     })
 
     if (user) {
@@ -117,8 +117,48 @@ const loginUser = asyncHandler(async (req, res) => {
 
     //  Trigger 2FA for unknow userAgent
 
+    // Get UserAgent
+    const ua = parser(req.headers['user-agent']);
+    const thisUserAgent = ua.ua;
+
+    console.log(thisUserAgent);
+
+    const allowedAgent = user.userAgent.includes(thisUserAgent);
+
+    if (!allowedAgent) {
+        // Generate 6 digit code
+        const loginCode = Math.floor(100000 + Math.random() * 900000);
+
+        console.log(loginCode);
+        // Encrypt loginCode before saving to Database
+        const encryptedLoginCode = cryptr.encrypt(loginCode.toString());
+
+        // Delete token if its exist in Database
+        let userToken = await Token.findOne({ userId: user._id })
+        if (userToken) {
+            await userToken.deleteOne()
+        }
+
+
+        // Save token and save 
+
+        await new Token({
+            userId: user._id,
+            loginToken: encryptedLoginCode,
+            createAt: Date.now(),
+            expireAt: Date.now() + 60 * (60 * 1000) // 1hr
+        }).save();
+
+        res.status(400)
+        throw new Error("New device detected, Check your email for login code");
+
+    }
+
+
     // Generate Token 
     const token = generateToken(user._id);
+
+
     if (user && passwordIsCorrect) {
         // Send HTTP 
         res.cookie("token", token, {
@@ -126,7 +166,7 @@ const loginUser = asyncHandler(async (req, res) => {
             httpOnly: true,
             expires: new Date(Date.now() + 1000 * 86400), // 1 day
             sameSite: "none",
-            secure: true,
+            // secure: true,
         });
         const { _id, name, email, number, bio, photo, role, isVerified } = user;
 
@@ -148,6 +188,113 @@ const loginUser = asyncHandler(async (req, res) => {
     }
 });
 
+//  Send Login Code
+const sendLoginCode = asyncHandler(async (req, res) => {
+    const { email } = req.params;
+    const user = await User.findOne({ email });
+
+    if (!user) {
+        res.status(404)
+        throw new Error("user not found");
+    }
+    // Find Login Code in DB
+    let userToken = await Token.findOne({ userId: user._id, expireAt: { $gt: Date.now() } });
+    if (!userToken) {
+        res.status(404)
+        throw new Error("Invalid or Expire Token, please Login again");
+    }
+
+    const loginCode = userToken.loginToken;
+    const decryptedLoginCode = cryptr.decrypt(loginCode);
+
+    // Send Login Code Email to user
+    const subject = 'Login Access from Glopilot'
+    const send_to = email
+    const sent_from = process.env.EMAIL_USER
+    const reply_to = "noreply"
+    const template = 'Login Code'
+    const name = user.name
+    const link = decryptedLoginCode
+
+    try {
+        await sendEmail(
+            subject,
+            send_to,
+            sent_from,
+            reply_to,
+            template,
+            name,
+            link);
+        res.status(200).json({ message: `Access Code to sent ${email} Email` });
+    } catch (error) {
+        res.status(500)
+        throw new Error("Email not send please try again");
+    }
+
+
+});
+
+// login With Code
+const loginWithCode = asyncHandler(async (req, res) => {
+    const { email } = req.params;
+    const { loginCode } = req.body;
+
+    const user = await User.findOne({ email });
+    if (!user) {
+        res.status(404)
+        throw new Error("user not found");
+    }
+
+    // Find Login Code in DB
+    let userToken = await Token.findOne({ userId: user._id, expireAt: { $gt: Date.now() } });
+    if (!userToken) {
+        res.status(404)
+        throw new Error("Invalid or Expire Token, please Login again");
+    }
+
+    const decryptedLoginCode = cryptr.decrypt(userToken.loginToken);
+
+    if (loginCode !== decryptedLoginCode) {
+        res.status(400)
+        throw new Error("Invalid login Code, please Login again");
+    } else {
+        // Register UA
+        const ua = parser(req.headers['user-agent']);
+        const thisUserAgent = ua.ua;
+
+        console.log(thisUserAgent);
+
+        user.userAgent.push(thisUserAgent);
+        await user.save();
+
+
+        // Generate Token 
+        const token = generateToken(user._id);
+
+        // Send HTTP 
+        res.cookie("token", token, {
+            path: "/",
+            httpOnly: true,
+            expires: new Date(Date.now() + 1000 * 86400), // 1 day
+            sameSite: "none",
+            // secure: true,
+        })
+        const { _id, name, email, number, bio, photo, role, isVerified } = user;
+
+        res.status(201).json({
+            _id,
+            name,
+            email,
+            number,
+            bio,
+            photo,
+            role,
+            isVerified,
+            token
+        });
+    }
+
+})
 //  Send verification Email
 const sendVerificationEmail = asyncHandler(async (req, res) => {
     const user = User.findById(req.user._id);
@@ -400,7 +547,6 @@ const sendAutomatedEmail = asyncHandler(async (req, res) => {
 });
 
 //  Forgot Password 
-
 const forgotPassword = asyncHandler(async (req, res) => {
     const { email } = req.body;
 
@@ -459,7 +605,6 @@ const forgotPassword = asyncHandler(async (req, res) => {
 });
 
 // Reset Password
-
 const resetPassword = asyncHandler(async (req, res) => {
     const { resetToken } = req.params;
     const { password } = req.body;
@@ -488,8 +633,7 @@ const resetPassword = asyncHandler(async (req, res) => {
 
     });
 
-})
-
+});
 
 // Change Password
 const changePassword = asyncHandler(async (req, res) => {
@@ -536,5 +680,7 @@ module.exports = {
     verifyUser,
     forgotPassword,
     resetPassword,
-    changePassword
+    changePassword,
+    sendLoginCode,
+    loginWithCode
 }

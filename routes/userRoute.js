@@ -3,7 +3,8 @@ const { register, loginUser, logOut,
     getUser, updateUser,
     deleteUser, getAllUsers, loginStatus,
     upgradeUser, sendAutomatedEmail,
-    sendVerificationEmail, verifyUser, forgotPassword, resetPassword, changePassword
+    sendVerificationEmail, verifyUser, forgotPassword,
+    resetPassword, changePassword, sendLoginCode, loginWithCode
 } = require("../controller/userController");
 const { protect, adminOnly, authorOnly } = require("../middleware/authmiddleware");
 const router = express.Router();
@@ -24,6 +25,8 @@ router.patch("/verifyUser/:verifcationToken", verifyUser);
 router.post("/forgotPassword", forgotPassword);
 router.patch("/resetPassword/:resetPassword", resetPassword);
 router.patch("/changePassword", protect, changePassword);
+router.post("/sendLoginCode/:email", sendLoginCode);
+router.post("/loginWithCode/:email", loginWithCode);
 
 
 module.exports = router;
