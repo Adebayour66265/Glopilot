@@ -5,9 +5,9 @@ const path = require("path");
 const sendEmail = async (subject, send_to, sent_from, reply_to, template, name, link) => {
     // create transporter
     const transporter = nodemailer.createTransport({
-        host: process.env.EMAIL_HOST,
+        host: 'smtp.zoho.com',
         // host: process.env.EMAIL_HOST || 'smtp.zoho.com',
-        port: 578,
+        port: 465,
         auth: {
             user: process.env.EMAIL_USER,
             pass: process.env.EMAIL_PASSWORD
@@ -40,9 +40,8 @@ const sendEmail = async (subject, send_to, sent_from, reply_to, template, name, 
     }));
     // option for sending email
     const options = {
-        from: sent_from,
+        from: process.env.EMAIL_USER,
         to: send_to,
-        replyTo: reply_to,
         subject,
         template,
         context: {
